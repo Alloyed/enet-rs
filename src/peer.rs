@@ -3,18 +3,14 @@ use std::time::Duration;
 
 use enet_sys::{
     enet_peer_disconnect, enet_peer_disconnect_later, enet_peer_disconnect_now, enet_peer_receive,
-    enet_peer_reset, enet_peer_send, ENetPeer,
-    _ENetPeerState,
-    _ENetPeerState_ENET_PEER_STATE_DISCONNECTED,
-    _ENetPeerState_ENET_PEER_STATE_CONNECTING,
+    enet_peer_reset, enet_peer_send, enet_peer_timeout, ENetPeer, _ENetPeerState,
     _ENetPeerState_ENET_PEER_STATE_ACKNOWLEDGING_CONNECT,
+    _ENetPeerState_ENET_PEER_STATE_ACKNOWLEDGING_DISCONNECT,
+    _ENetPeerState_ENET_PEER_STATE_CONNECTED, _ENetPeerState_ENET_PEER_STATE_CONNECTING,
     _ENetPeerState_ENET_PEER_STATE_CONNECTION_PENDING,
     _ENetPeerState_ENET_PEER_STATE_CONNECTION_SUCCEEDED,
-    _ENetPeerState_ENET_PEER_STATE_CONNECTED,
-    _ENetPeerState_ENET_PEER_STATE_DISCONNECT_LATER,
-    _ENetPeerState_ENET_PEER_STATE_DISCONNECTING,
-    _ENetPeerState_ENET_PEER_STATE_ACKNOWLEDGING_DISCONNECT,
-    _ENetPeerState_ENET_PEER_STATE_ZOMBIE,
+    _ENetPeerState_ENET_PEER_STATE_DISCONNECTED, _ENetPeerState_ENET_PEER_STATE_DISCONNECTING,
+    _ENetPeerState_ENET_PEER_STATE_DISCONNECT_LATER, _ENetPeerState_ENET_PEER_STATE_ZOMBIE,
 };
 
 use crate::{Address, Error, Packet};
@@ -76,7 +72,9 @@ impl PeerState {
             _ENetPeerState_ENET_PEER_STATE_CONNECTED => PeerState::Connected,
             _ENetPeerState_ENET_PEER_STATE_DISCONNECT_LATER => PeerState::DisconnectLater,
             _ENetPeerState_ENET_PEER_STATE_DISCONNECTING => PeerState::Disconnecting,
-            _ENetPeerState_ENET_PEER_STATE_ACKNOWLEDGING_DISCONNECT => PeerState::AcknowledgingDisconnect,
+            _ENetPeerState_ENET_PEER_STATE_ACKNOWLEDGING_DISCONNECT => {
+                PeerState::AcknowledgingDisconnect
+            }
             _ENetPeerState_ENET_PEER_STATE_ZOMBIE => PeerState::Zombie,
             val => panic!("unexpected peer state: {}", val),
         }
@@ -172,7 +170,7 @@ impl<'a, T> Peer<'a, T> {
 
     /// Returns the state this `Peer` is in.
     pub fn state(&self) -> PeerState {
-        PeerState::from_sys_state(unsafe {(*self.inner).state})
+        PeerState::from_sys_state(unsafe { (*self.inner).state })
     }
 
     /// Queues a packet to be sent.
@@ -233,5 +231,17 @@ impl<'a, T> Peer<'a, T> {
             channel_id,
             _priv_guard: PhantomData,
         })
+    }
+
+    /// Sets the timeout values for this connection.
+    /// # Arguments
+    /// * `limit_factor` - a factor that is multiplied with a value that based on the average round trip time to compute the timeout limit
+    /// * `min_timeout_ms` - timeout value in milliseconds that a reliable packet has to be acknowledged if the variable timeout limit was exceeded
+    /// * `max_timeout_ms` - fixed timeout in milliseconds for which any packet has to be acknowledged
+
+    pub fn set_timeout(&mut self, limit_factor: u32, min_timeout_ms: u32, max_timeout_ms: u32) {
+        unsafe {
+            enet_peer_timeout(self.inner, limit_factor, min_timeout_ms, max_timeout_ms);
+        }
     }
 }
