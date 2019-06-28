@@ -1,4 +1,5 @@
 use std::marker::PhantomData;
+use std::ptr;
 use std::time::Duration;
 
 use enet_sys::{
@@ -243,5 +244,17 @@ impl<'a, T> Peer<'a, T> {
         unsafe {
             enet_peer_timeout(self.inner, limit_factor, min_timeout_ms, max_timeout_ms);
         }
+    }
+}
+
+impl<T> PartialEq for Peer<'_, T> {
+    fn eq(&self, other: &Self) -> bool {
+        ptr::eq(self.inner, other.inner)
+    }
+}
+
+impl<T> PartialEq<*mut ENetPeer> for Peer<'_, T> {
+    fn eq(&self, other: &*mut ENetPeer) -> bool {
+        ptr::eq(self.inner, *other)
     }
 }

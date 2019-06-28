@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use crate::{Address, Event, Error, EnetKeepAlive, Peer};
+use crate::{Address, EnetKeepAlive, Error, Event, Peer};
 
 use enet_sys::{
     enet_host_bandwidth_limit, enet_host_channel_limit, enet_host_check_events, enet_host_connect,
@@ -132,7 +132,23 @@ impl<T> Host<T> {
     }
 
     /// Returns an iterator over all peers connected to this `Host`.
-    pub fn peers(&'_ mut self) -> impl Iterator<Item = Peer<'_, T>> {
+    pub fn get_peer(&'_ self, index: usize) -> Peer<'_, T> {
+        let raw_peers =
+            unsafe { std::slice::from_raw_parts_mut((*self.inner).peers, (*self.inner).peerCount) };
+
+        Peer::new(&mut raw_peers[index])
+    }
+
+    /// Returns an iterator over all peers connected to this `Host`.
+    pub fn peers(&'_ self) -> impl Iterator<Item = Peer<'_, T>> {
+        let raw_peers =
+            unsafe { std::slice::from_raw_parts_mut((*self.inner).peers, (*self.inner).peerCount) };
+
+        raw_peers.into_iter().map(|rp| Peer::new(rp))
+    }
+
+    /// Returns an iterator over all peers connected to this `Host`.
+    pub fn peers_mut(&'_ mut self) -> impl Iterator<Item = Peer<'_, T>> {
         let raw_peers =
             unsafe { std::slice::from_raw_parts_mut((*self.inner).peers, (*self.inner).peerCount) };
 
@@ -150,7 +166,7 @@ impl<T> Host<T> {
             unsafe { enet_host_service(self.inner, &mut sys_event as *mut ENetEvent, timeout_ms) };
 
         match res {
-            r if r > 0 => Ok(Event::from_sys_event(&sys_event)),
+            r if r > 0 => Ok(Event::from_sys_event(self, &sys_event)),
             0 => Ok(None),
             r if r < 0 => Err(Error(r)),
             _ => panic!("unreachable"),
@@ -167,7 +183,7 @@ impl<T> Host<T> {
         let res = unsafe { enet_host_check_events(self.inner, &mut sys_event as *mut ENetEvent) };
 
         match res {
-            r if r > 0 => Ok(Event::from_sys_event(&sys_event)),
+            r if r > 0 => Ok(Event::from_sys_event(self, &sys_event)),
             0 => Ok(None),
             r if r < 0 => Err(Error(r)),
             _ => panic!("unreachable"),

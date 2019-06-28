@@ -46,8 +46,21 @@ impl PacketMode {
     fn to_sys_flags(&self) -> u32 {
         match self {
             PacketMode::UnreliableSequenced => 0,
-            PacketMode::UnreliableUnsequenced => _ENetPacketFlag_ENET_PACKET_FLAG_UNSEQUENCED as u32,
+            PacketMode::UnreliableUnsequenced => {
+                _ENetPacketFlag_ENET_PACKET_FLAG_UNSEQUENCED as u32
+            }
             PacketMode::ReliableSequenced => _ENetPacketFlag_ENET_PACKET_FLAG_RELIABLE as u32,
+        }
+    }
+
+    fn from_sys_flags(sys_flags: u32) -> PacketMode {
+        let unsequencedFlag = _ENetPacketFlag_ENET_PACKET_FLAG_UNSEQUENCED as u32;
+        let reliableFlag = _ENetPacketFlag_ENET_PACKET_FLAG_RELIABLE as u32;
+        match sys_flags {
+            0 => PacketMode::UnreliableSequenced,
+            unsequencedFlag => PacketMode::UnreliableUnsequenced,
+            reliableFlag => PacketMode::ReliableSequenced,
+            _ => panic!("Invalid sysflag"),
         }
     }
 }
@@ -66,6 +79,11 @@ impl Packet {
         Ok(Packet::from_sys_packet(res))
     }
 
+    // TODO: this should be a clone
+    pub fn copy(otherPacket: &Packet) -> Result<Packet, Error> {
+        Packet::new(otherPacket.data(), otherPacket.packet_mode())
+    }
+
     pub(crate) fn from_sys_packet(inner: *mut ENetPacket) -> Packet {
         Packet { inner }
     }
@@ -80,6 +98,11 @@ impl Packet {
     /// Returns a reference to the bytes inside this packet.
     pub fn data<'a>(&'a self) -> &'a [u8] {
         unsafe { std::slice::from_raw_parts((*self.inner).data, (*self.inner).dataLength) }
+    }
+
+    /// Returns the delivery mechanism for this packet.
+    pub fn packet_mode<'a>(&'a self) -> PacketMode {
+        unsafe { PacketMode::from_sys_flags((*self.inner).flags) }
     }
 }
 
