@@ -43,24 +43,32 @@ impl PacketMode {
         }
     }
 
+    const UNSEQUENCED_FLAG: u32 = _ENetPacketFlag_ENET_PACKET_FLAG_UNSEQUENCED as u32;
+    const RELIABLE_FLAG: u32 = _ENetPacketFlag_ENET_PACKET_FLAG_RELIABLE as u32;
     fn to_sys_flags(&self) -> u32 {
         match self {
             PacketMode::UnreliableSequenced => 0,
-            PacketMode::UnreliableUnsequenced => {
-                _ENetPacketFlag_ENET_PACKET_FLAG_UNSEQUENCED as u32
-            }
-            PacketMode::ReliableSequenced => _ENetPacketFlag_ENET_PACKET_FLAG_RELIABLE as u32,
+            PacketMode::UnreliableUnsequenced => PacketMode::UNSEQUENCED_FLAG,
+            PacketMode::ReliableSequenced => PacketMode::RELIABLE_FLAG,
         }
     }
 
     fn from_sys_flags(sys_flags: u32) -> PacketMode {
-        let unsequencedFlag = _ENetPacketFlag_ENET_PACKET_FLAG_UNSEQUENCED as u32;
-        let reliableFlag = _ENetPacketFlag_ENET_PACKET_FLAG_RELIABLE as u32;
         match sys_flags {
             0 => PacketMode::UnreliableSequenced,
-            unsequencedFlag => PacketMode::UnreliableUnsequenced,
-            reliableFlag => PacketMode::ReliableSequenced,
+            PacketMode::UNSEQUENCED_FLAG => PacketMode::UnreliableUnsequenced,
+            PacketMode::RELIABLE_FLAG => PacketMode::ReliableSequenced,
             _ => panic!("Invalid sysflag"),
+        }
+    }
+
+    /// Returns a packet mode from matching against an input string.
+    pub fn from_string(string: &str) -> Option<PacketMode> {
+        match string {
+            "unreliable" => Some(PacketMode::UnreliableSequenced),
+            "unsequenced" => Some(PacketMode::UnreliableUnsequenced),
+            "reliable" => Some(PacketMode::ReliableSequenced),
+            _ => None,
         }
     }
 }
@@ -80,8 +88,9 @@ impl Packet {
     }
 
     // TODO: this should be a clone
-    pub fn copy(otherPacket: &Packet) -> Result<Packet, Error> {
-        Packet::new(otherPacket.data(), otherPacket.packet_mode())
+    /// Returns a copy of this packet
+    pub fn copy(other_packet: &Packet) -> Result<Packet, Error> {
+        Packet::new(other_packet.data(), other_packet.packet_mode())
     }
 
     pub(crate) fn from_sys_packet(inner: *mut ENetPacket) -> Packet {
