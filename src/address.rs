@@ -63,10 +63,10 @@ impl Address {
     pub(crate) fn from_enet_address(addr: &ENetAddress) -> Address {
         Address::new(
             Ipv4Addr::new(
-                (addr.host >> 24) as u8,
-                (addr.host >> 16) as u8,
-                (addr.host >> 8) as u8,
                 (addr.host >> 0) as u8,
+                (addr.host >> 8) as u8,
+                (addr.host >> 16) as u8,
+                (addr.host >> 24) as u8,
             ),
             addr.port,
         )
