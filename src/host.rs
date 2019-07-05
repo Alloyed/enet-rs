@@ -52,6 +52,14 @@ impl BandwidthLimit {
             BandwidthLimit::Limited(l) => l,
         }
     }
+
+    /// Create a bandwidth limit value from a u32. 0 is unlimited
+    pub fn from_enet_u32(enet_val: u32) -> BandwidthLimit {
+        match enet_val {
+            0 => BandwidthLimit::Unlimited,
+            l => BandwidthLimit::Limited(l),
+        }
+    }
 }
 
 /// A `Host` represents one endpoint of an ENet connection. Created through `Enet`.
