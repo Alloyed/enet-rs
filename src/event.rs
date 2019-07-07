@@ -37,8 +37,8 @@ impl<'a, T> Event<'a, T> {
         match event_sys.type_ {
             _ENetEventType_ENET_EVENT_TYPE_NONE => None,
             _ENetEventType_ENET_EVENT_TYPE_CONNECT => {
-                let peerIndex = host.peers().position(|a| a == event_sys.peer).unwrap();
-                Some(Event::Connect(Peer::new(event_sys.peer), peerIndex))
+                let peer_index = host.peers().position(|a| a == event_sys.peer).unwrap();
+                Some(Event::Connect(Peer::new(event_sys.peer), peer_index))
             }
             _ENetEventType_ENET_EVENT_TYPE_DISCONNECT => {
                 Some(Event::Disconnect(Peer::new(event_sys.peer), event_sys.data))
